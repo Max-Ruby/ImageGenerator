@@ -3,6 +3,11 @@ from keras.models import Model
 from keras.layers import Conv2D, Dense, Reshape, Conv2DTranspose, UpSampling2D, Input, Reshape, Concatenate, MaxPooling2D, ZeroPadding2D
 import tensorflow as tf; tf.image # There's a bug in tensorflow that requires us to import tf.image like this
 
+'''
+Various Notes:
+Read ONEGENERATOR.md.
+'''
+
 
 def one_generator(digit_dimension):
     inputs = Input(shape=(digit_dimension,))

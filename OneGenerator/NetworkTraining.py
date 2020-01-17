@@ -10,6 +10,12 @@ import matplotlib.pyplot as plt
 from NetworkArchitectures import one_generator, one_discriminator
 from keras.datasets.mnist import load_data
 
+'''
+Various Notes:
+1) 1 is the discriminator's output for a "real" image, 0 is the output for a "synthetic" image.
+2) The training code is very barebones - it has a fixed learning rate, and there's no real trick involved.
+'''
+
 
 def filter_digits(chosen_digit):
     (train_image, train_label), (test_image, test_label) = load_data()
@@ -87,9 +93,7 @@ for epoch in range(epochs):
     #Train generator and discriminator simultaneously
     ## Generate samples
     train_synth_ones = K.eval(model(K.random_uniform_variable((train_size,latent_dimension),-1,1)))
-    ## Load into dataset: 1 for synthetic, 0 for real.
     permutation = np.random.permutation(train_size)
-    ## Shuffle
     for i in range(num_batches):
         start = time.time()
         print("Epoch " + str(epoch + 1) + "/" + str(epochs) + ": Batch " +str(i+1) +"/" +str(num_batches))
@@ -101,6 +105,7 @@ for epoch in range(epochs):
         time_taken = time.time() - start
         #print("Discriminator accuracy:" +str(disc_mets[1]) + "\t Generator Fool Rate:" + str(model_mets[1]) + "\t Estimated time per epoch:" + str(int(time_taken * num_batches)) + " seconds")
         print("Discriminator accuracy: %6.3f \t Generator Fool Rate: %6.3f \t Estimated time per epoch: %6.3f seconds" % (disc_mets[0],model_mets[0],(time_taken * num_batches)))
+
     ## Generate images for the given epoch
 
     synth_images = grab_generated_samples(25,model)
