@@ -7,7 +7,7 @@ import matplotlib
 import time
 matplotlib.use('Agg') # matplotlib likes to crash if you don't do this.
 import matplotlib.pyplot as plt
-from NetworkArchitectures import one_generator, one_discriminator
+from NetworkArchitectures import four_generator, four_discriminator
 from keras.datasets.mnist import load_data
 
 '''
@@ -52,20 +52,21 @@ def make_gan(model, discriminator):
     gan = Sequential()
     gan.add(model)
     gan.add(discriminator)
-    gan.compile(loss='binary_crossentropy', optimizer=Adam(lr=learnrate), metrics=['accuracy'])
+    gan.compile(loss='binary_crossentropy', optimizer=Adam(lr=learnrate,decay=1e-6), metrics=['accuracy'])
     return gan
 
 
 # Load Models
 latent_dimension = 32
-model = one_generator(latent_dimension)
-discriminator = one_discriminator()
+model = four_generator(latent_dimension)
+discriminator = four_discriminator()
 
 # Set Training Parameters
-chosen_digit = 1
+chosen_digit = 4
 batch_size = 64
 epochs = 100
-learnrate = 1e-4
+learnrate = 5e-4
+learnrate_disc = 5e-5
 label_noise_level = 0.00
 
 # Load Data
@@ -80,7 +81,7 @@ for i in range(25):
 plt.savefig("images.png")
 
 # Compile models.
-discriminator.compile(loss='binary_crossentropy', optimizer=Adam(lr=learnrate), metrics=['accuracy'])
+discriminator.compile(loss='binary_crossentropy', optimizer=Adam(lr=learnrate_disc, decay=1e-6), metrics=['accuracy'])
 
 # Create GAN
 gan = make_gan(model,discriminator)
