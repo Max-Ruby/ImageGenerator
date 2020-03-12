@@ -1,6 +1,6 @@
 # One Generator
 
-The purpose was to generate some ones.
+The purpose of this neural network was to produce pictures of ones. A one should be the easiest digit to draw, and if we cannot use our network to draw the number 1 then we should reconsider our approach.
 
 The following is the architecture of the generator.
 

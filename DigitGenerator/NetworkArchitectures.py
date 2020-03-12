@@ -9,7 +9,7 @@ Read ONEGENERATOR.md.
 '''
 
 
-def four_generator(digit_dimension):
+def digit_generator(digit_dimension):
     inputs = Input(shape=(digit_dimension,))
     coarse_1 = Reshape((1, 1, digit_dimension,))(inputs)
     coarse_1 = ZeroPadding2D(padding=((3,3),(3,3)))(coarse_1)
@@ -29,7 +29,7 @@ def four_generator(digit_dimension):
     return model
 
 
-def four_discriminator():
+def digit_discriminator():
     inputs = Input(shape=(28, 28, 1,))
     fine = Conv2D(32,(3,3), padding='same', activation='elu')(inputs)
     fine = Conv2D(32, (3, 3), padding='same', activation='elu')(fine)
