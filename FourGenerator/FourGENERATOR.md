@@ -1,6 +1,6 @@
 # Four Generator
 
-The purpose of this neural network was to produce pictures of fours. A four should be the hardest digit to draw, and if we can use our network to draw the number 4 then we should feel confident in our approach
+The purpose of this neural network was to produce pictures of fours. A four should be the hardest digit to draw, and if we can use our network to draw the number 4, then we should feel confident in our general approach.
 
 The following is the architecture of the generator.
 
@@ -24,7 +24,7 @@ The end result of training with the parameters in the code was the following set
 
 ![Four Generator_Output](generated_images_epoch_99.png "Four Generator Output")
 
-This is an acceptable result for the time being. For reference, here is a collection of ones from the MNIST dataset used to train the network:
+This is an acceptable result for the time being. For reference, here is a collection of fours from the MNIST dataset used to train the network:
 
 ![Four Generator_Training_Data](images.png "Four Generator Training Images")
 

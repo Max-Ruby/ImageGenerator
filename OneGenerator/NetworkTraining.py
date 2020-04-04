@@ -5,7 +5,8 @@ from keras.optimizers import Adam
 import numpy as np
 import matplotlib
 import time
-matplotlib.use('Agg') # matplotlib likes to crash if you don't do this.
+
+matplotlib.use('Agg')  # matplotlib likes to crash if you don't do this.
 import matplotlib.pyplot as plt
 from NetworkArchitectures import one_generator, one_discriminator
 from keras.datasets.mnist import load_data
@@ -23,20 +24,20 @@ def filter_digits(chosen_digit):
     test_label = np.where(test_label == chosen_digit)
     train = np.zeros([train_label[0].shape[0], 28, 28, 1])
     test = np.zeros([test_label[0].shape[0], 28, 28, 1])
-    train[:,:,:,0] = train_image[train_label] / 255.0
-    test[:,:,:,0] = test_image[test_label] / 255.0
+    train[:, :, :, 0] = train_image[train_label] / 255.0
+    test[:, :, :, 0] = test_image[test_label] / 255.0
     return train, test
 
 
 def grab_discriminator_samples(dataset, samples, index, permutation, model):
-    train_mixed_ones = np.zeros([samples,28,28,1])
+    train_mixed_ones = np.zeros([samples, 28, 28, 1])
     train_mixed_labels = np.zeros([samples])
     for j in range(0, samples // 2):
-        train_mixed_ones[j, :, :, :] = dataset[permutation[(index*samples) + j], :, :, :]
+        train_mixed_ones[j, :, :, :] = dataset[permutation[(index * samples) + j], :, :, :]
         train_mixed_labels[j] = 1.0
-    fakes = grab_generated_samples(samples//2, model)
-    for j in range(samples//2, samples):
-        train_mixed_ones[j, :, :, :] = fakes[j - samples//2, :, :, :]
+    fakes = grab_generated_samples(samples // 2, model)
+    for j in range(samples // 2, samples):
+        train_mixed_ones[j, :, :, :] = fakes[j - samples // 2, :, :, :]
         train_mixed_labels[j] = 0.0
     return train_mixed_ones, train_mixed_labels
 
@@ -74,47 +75,49 @@ train_size = train_ones.shape[0]
 num_batches = train_size // batch_size
 
 for i in range(25):
-    plt.subplot(5,5,1+i)
+    plt.subplot(5, 5, 1 + i)
     plt.axis('off')
-    plt.imshow(train_ones[i,:,:,0], cmap='gray')
+    plt.imshow(train_ones[i, :, :, 0], cmap='gray')
 plt.savefig("images.png")
 
 # Compile models.
 discriminator.compile(loss='binary_crossentropy', optimizer=Adam(lr=learnrate), metrics=['accuracy'])
 
 # Create GAN
-gan = make_gan(model,discriminator)
+gan = make_gan(model, discriminator)
 
 # Train
 train_loss_disc = np.zeros(epochs)
 test_loss_disc = np.zeros(epochs)
 
 for epoch in range(epochs):
-    #Train generator and discriminator simultaneously
+    # Train generator and discriminator simultaneously
     ## Generate samples
-    train_synth_ones = K.eval(model(K.random_uniform_variable((train_size,latent_dimension),-1,1)))
+    train_synth_ones = K.eval(model(K.random_uniform_variable((train_size, latent_dimension), -1, 1)))
     permutation = np.random.permutation(train_size)
     for i in range(num_batches):
         start = time.time()
-        print("Epoch " + str(epoch + 1) + "/" + str(epochs) + ": Batch " +str(i+1) +"/" +str(num_batches))
-        train_mixed_ones, train_mixed_labels = grab_discriminator_samples(train_ones,batch_size,i,permutation, model)
+        print("Epoch " + str(epoch + 1) + "/" + str(epochs) + ": Batch " + str(i + 1) + "/" + str(num_batches))
+        train_mixed_ones, train_mixed_labels = grab_discriminator_samples(train_ones, batch_size, i, permutation, model)
         disc_mets = discriminator.train_on_batch(train_mixed_ones, train_mixed_labels)
         train_noise = 2 * np.random.random([batch_size, latent_dimension]) - 1
         train_gan_labels = np.ones(batch_size)
         model_mets = gan.train_on_batch(train_noise, train_gan_labels)
         time_taken = time.time() - start
-        #print("Discriminator accuracy:" +str(disc_mets[1]) + "\t Generator Fool Rate:" + str(model_mets[1]) + "\t Estimated time per epoch:" + str(int(time_taken * num_batches)) + " seconds")
-        print("Discriminator accuracy: %6.3f \t Generator Fool Rate: %6.3f \t Estimated time per epoch: %6.3f seconds" % (disc_mets[1],model_mets[1],(time_taken * num_batches)))
+        # print("Discriminator accuracy:" +str(disc_mets[1]) + "\t Generator Fool Rate:" + str(model_mets[1]) + "\t Estimated time per epoch:" + str(int(time_taken * num_batches)) + " seconds")
+        print(
+            "Discriminator accuracy: %6.3f \t Generator Fool Rate: %6.3f \t Estimated time per epoch: %6.3f seconds" % (
+            disc_mets[1], model_mets[1], (time_taken * num_batches)))
 
     ## Generate images for the given epoch
 
-    synth_images = grab_generated_samples(25,model)
+    synth_images = grab_generated_samples(25, model)
     disc_mets = discriminator.test_on_batch(synth_images, np.ones([25]))
     print("Generator Fool Rate:" + str(disc_mets[1]))
-    disc_mets = discriminator.test_on_batch(test_ones[range(0,25),:,:,:], np.ones([25]))
+    disc_mets = discriminator.test_on_batch(test_ones[range(0, 25), :, :, :], np.ones([25]))
     print("Discriminator True Pass Rate:" + str(disc_mets[1]))
     for i in range(25):
-        plt.subplot(5,5,1+i)
+        plt.subplot(5, 5, 1 + i)
         plt.axis('off')
-        plt.imshow(synth_images[i,:,:,0], cmap='gray')
+        plt.imshow(synth_images[i, :, :, 0], cmap='gray')
     plt.savefig("generated_images_epoch_" + str(epoch) + ".png")
