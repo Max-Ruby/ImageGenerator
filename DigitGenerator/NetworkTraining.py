@@ -2,6 +2,7 @@ from __future__ import print_function
 from keras.models import Sequential
 from keras import backend as K
 from keras.optimizers import Adam
+from keras.losses import kullback_leibler_divergence, mean_absolute_error
 import numpy as np
 import matplotlib
 import time
@@ -18,16 +19,18 @@ Various Notes:
 
 
 def grab_discriminator_samples(dataset, labels, samples, index, permutation, model):
-    train_mixed_ones = np.zeros([samples,28,28,1])
-    train_mixed_labels = np.zeros([samples,10])
-    for j in range(0, samples // 2):
-        train_mixed_ones[j, :, :, :] = dataset[permutation[(index*samples) + j], :, :, :]
-        train_mixed_labels[j,:] = labels[permutation[(index*samples)+j],:]
+    train_mixed_digits = np.zeros([samples,28,28,1])
+    train_mixed_labels = np.zeros([samples,11])
+    for j in range(0, (10*samples) // 11):
+        train_mixed_digits[j, :, :, :] = dataset[permutation[(index*samples) + j], :, :, :]
+        for k in range(0,10):
+            train_mixed_labels[j,k] = labels[permutation[(index*samples)+j],k]
     fakes = grab_generated_samples(samples//2, model)
-    for j in range(samples//2, samples):
-        train_mixed_ones[j, :, :, :] = fakes[j - samples//2, :, :, :]
-        train_mixed_labels[j,:] = np.zeros([10])
-    return train_mixed_ones, train_mixed_labels
+    for j in range((10*samples)//11, samples):
+        train_mixed_digits[j, :, :, :] = fakes[j - samples//2, :, :, :]
+        train_mixed_labels[j,:] = np.zeros([11])
+        train_mixed_labels[j,10] = 1
+    return train_mixed_digits, train_mixed_labels
 
 
 def embedding(val):
@@ -44,17 +47,16 @@ def grab_generated_samples(samples, model):
     synth_images = model.predict([train_noise,train_digits])
     return synth_images
 
-
 # Load Models
-latent_dimension = 256
+latent_dimension = 128
 model = digit_generator(latent_dimension,10)
 discriminator = digit_discriminator(10)
 
 # Set Training Parameters
 batch_size = 32
 epochs = 100
-learnrate = 5e-4
-learnrate_disc = 5e-5
+learnrate = 1e-4
+learnrate_disc = 1e-5
 label_noise_level = 0.00
 
 # Load Data
@@ -63,8 +65,8 @@ train_size = train_labels_raw.shape[0]
 train_images = np.zeros([train_size,28,28,1])
 train_labels = np.zeros([train_size,10])
 for i in range(0,train_size):
-    train_images[i,:,:,0] = train_images_raw[i,:,:]
-    train_labels[i,:] = embedding(train_labels_raw)
+    train_images[i,:,:,0] = train_images_raw[i,:,:]/255.0
+    train_labels[i,:] = embedding(train_labels_raw[i])
 num_batches = train_size // batch_size
 
 
@@ -80,12 +82,12 @@ plt.savefig("images.png")
 '''
 
 # Compile models.
-discriminator.compile(loss='kullback_leibler_divergence', optimizer=Adam(lr=learnrate_disc, decay=1e-6))
+discriminator.compile(loss='categorical_crossentropy',optimizer=Adam(lr=learnrate_disc, decay=1e-6),metrics=['accuracy'])
 
 # Create GAN
 gan = make_gan(model,discriminator,latent_dimension,10)
 
-gan.compile(loss='kullback_leibler_divergence', optimizer=Adam(lr=learnrate, decay=1e-6))
+gan.compile(loss='categorical_crossentropy', optimizer=Adam(lr=learnrate, decay=1e-6),metrics=['accuracy'])
 # Train
 train_loss_disc = np.zeros(epochs)
 test_loss_disc = np.zeros(epochs)
@@ -97,27 +99,30 @@ for epoch in range(epochs):
     for i in range(num_batches):
         start = time.time()
         print("Epoch " + str(epoch + 1) + "/" + str(epochs) + ": Batch " +str(i+1) +"/" +str(num_batches))
-        # Generate Synthetic samples, for generator training
-        '''
-        noises = K.constant(K.eval(K.random_uniform_variable((batch_size,latent_dimension),-1,1, dtype='float32')))
-        digits = np.zeros([batch_size,10])
-        for j in range(0,batch_size):
-            digits[j,:] = embedding(np.random.randint(0,9))
-        digits_tensor = K.constant(digits, dtype='float32')
-        train_synth_digits = K.eval(model([noises,digits_tensor]))
-        '''
         # Grab Real samples and Synthetic samples, for discriminator training
         train_mixed_digits, train_mixed_labels = grab_discriminator_samples(train_images,train_labels,batch_size,i,permutation, model)
 
         disc_mets = discriminator.train_on_batch(train_mixed_digits, train_mixed_labels)
         train_noise = 2 * np.random.random([batch_size, latent_dimension]) - 1
         digits = np.zeros([batch_size, 10])
+        target_fool = np.zeros([batch_size,11])
         for j in range(0, batch_size):
             digits[j, :] = embedding(np.random.randint(0, 9))
-
-        model_mets = gan.train_on_batch([train_noise,digits], digits)
+            for k in range(0,10):
+                target_fool[j,k] = digits[j,k]
+        model_mets = gan.train_on_batch([train_noise,digits], target_fool)
         time_taken = time.time() - start
-        #print("Discriminator accuracy:" +str(disc_mets[1]) + "\t Generator Fool Rate:" + str(model_mets[1]) + "\t Estimated time per epoch:" + str(int(time_taken * num_batches)) + " seconds")
-        print("Discriminator loss: %6.3f \t Generator loss: %6.3f \t Estimated time per epoch: %6.3f seconds" % (disc_mets,model_mets,(time_taken * num_batches)))
+        print("Discriminator accuracy:" +str(disc_mets[1]) + "\t Generator Fool Rate:" + str(model_mets[1]) + "\t Estimated time per epoch:" + str(int(time_taken * num_batches)) + " seconds")
 
     ## Generate images for the given epoch
+    for i in range(10):
+        noise = 2 * np.random.random([10, latent_dimension]) - 1
+        digit = np.zeros([10,10])
+        for j in range(10):
+            digit[j,:] = embedding(i)
+        example_images = model.predict([noise,digit])
+        for j in range(10):
+            plt.subplot(10, 10, 1 + 10 * i + j)
+            plt.axis('off')
+            plt.imshow(example_images[j, :, :, 0], cmap='gray')
+    plt.savefig("generated_images_epoch_" + str(epoch) + ".png")
